@@ -1,5 +1,7 @@
 package com.tz.spike_shop.rabbitmq;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.tz.spike_shop.mapper.SpikeOrderMapper;
 import com.tz.spike_shop.pojo.SpikeMessage;
 import com.tz.spike_shop.pojo.SpikeOrder;
 import com.tz.spike_shop.pojo.User;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -30,6 +33,9 @@ public class MqReceiver {
 
     @Autowired
     private IOrderService orderService;
+
+    @Autowired
+    private SpikeOrderMapper spikeOrderMapper;
 
     @RabbitListener(queues = "mq")
     public void listener(Object data) {
@@ -52,8 +58,16 @@ public class MqReceiver {
         if (goodsVo.getSpikeCount() < 1) return;
 
         // 在此检查单个用户是否重复购买
-        SpikeOrder spikeOrder = (SpikeOrder)redisTemplate.opsForValue().get("user_" + user.getId() + ":goods_" + goodsId);
-        if (spikeOrder != null) return;
+//        SpikeOrder spikeOrder = (SpikeOrder)redisTemplate.opsForValue().get("user_" + user.getId() + ":goods_" + goodsId);
+//        if (spikeOrder != null) return;
+
+        // 如果订单已存在，不消费，避免触发mq的 rebalance 机制
+        SpikeOrder spikeOrder = spikeOrderMapper.selectOne(new QueryWrapper<SpikeOrder>().eq("user_id", user.getId())
+                .eq("goods_id", goodsId));
+        if (spikeOrder != null) {
+            redisTemplate.opsForValue().set("user_" + user.getId() + ":goods_" + goodsId, spikeOrder, 60, TimeUnit.SECONDS);
+            return;
+        }
 
         orderService.spike(user, goodsVo);
     }
