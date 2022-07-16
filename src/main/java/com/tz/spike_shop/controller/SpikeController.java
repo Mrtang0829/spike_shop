@@ -2,6 +2,7 @@ package com.tz.spike_shop.controller;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.tz.spike_shop.annotation.AccessLimit;
 import com.tz.spike_shop.exception.GlobalException;
 import com.tz.spike_shop.pojo.*;
 import com.tz.spike_shop.rabbitmq.MqSender;
@@ -83,6 +84,7 @@ public class SpikeController implements InitializingBean {
     }
 
 
+    @AccessLimit(seconds = 5, maxCount = 5, needLogin = true)
     @GetMapping("/getSpikePath")
     @ResponseBody
     public ResponseResult getSpikePath(User user, Long goodsId, String captcha) {
