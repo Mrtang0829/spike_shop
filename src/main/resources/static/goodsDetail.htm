@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>商品详情</title>
+    <!-- jquery -->
+    <script type="text/javascript" src="/js/jquery.min.js"></script>
+    <!-- bootstrap -->
+    <link rel="stylesheet" type="text/css" href="/bootstrap/css/bootstrap.min.css"/>
+    <script type="text/javascript" src="/bootstrap/js/bootstrap.min.js"></script>
+    <!-- layer -->
+    <script type="text/javascript" src="/layer/layer.js"></script>
+    <!-- common.js -->
+    <script type="text/javascript" src="/js/common.js"></script>
+</head>
+<body>
+<div class="panel panel-default">
+    <div class="panel-heading">秒杀商品详情</div>
+    <div class="panel-body">
+        <span id="userTip"> 您还没有登录，请登陆后再操作<br/></span>
+        <span>没有收货地址的提示。。。</span>
+    </div>
+    <table class="table" id="goods">
+        <tr>
+            <td>商品名称</td>
+            <td colspan="3" id="goodsName"></td>
+        </tr>
+        <tr>
+            <td>商品图片</td>
+            <td colspan="3"><img id="picture" width="200" height="200"/></td>
+        </tr>
+        <tr>
+            <td>秒杀开始时间</td>
+            <td id="startTime" ></td>
+            <td >
+                <input type="hidden" id="remainSeconds">
+<!--                <input type="hidden" id="endTime" th:value="${#dates.format(goods.endDate, 'yyyy-MM-dd HH-mm-ss')}">-->
+<!--                <span th:if="${status eq 0}">秒杀倒计时:-->
+<!--                    <span id="countDown" th:text="-1"></span>秒-->
+<!--                </span>-->
+<!--                <span th:if="${status eq 1}">秒杀进行中</span>-->
+<!--                <span th:if="${status eq 2}">秒杀已结束</span>-->
+                <span id="spikeTip"></span>
+            </td>
+            <td>
+<!--                <form id="secKillForm" method="post" action="/spike/doSpike">-->
+<!--                    <input type="hidden" name="id" id="goodsId">-->
+<!--                    <button class="btn btn-primary btn-block" type="submit" id="buyButton">立即秒杀</button>-->
+<!--                </form>-->
+                <input type="hidden" name="id" id="goodsId">
+                <button class="btn btn-primary btn-block" type="button" onclick="spike()" id="buyButton">立即秒杀</button>
+            </td>
+        </tr>
+        <tr>
+            <td>商品原价</td>
+            <td colspan="3" id="goodsPrice"></td>
+        </tr>
+        <tr>
+            <td>秒杀价</td>
+            <td colspan="3" id="spikePrice"></td>
+        </tr>
+        <tr>
+            <td>库存数量</td>
+            <td colspan="3" id="spikeCount"></td>
+        </tr>
+    </table>
+</div>
+</body>
+<script >
+    $(function () {
+        getDetail();
+    });
+
+    function spike() {
+        $.ajax({
+            url: '/spike/doSpike',
+            type: 'POST',
+            data: {
+                goodsId: $("#goodsId").val(),
+            },
+            success: function (data) {
+                if(data.code === 200) {
+                    // window.location.href='orderDetail.htm?orderId=' + data.data.id;
+                    getSpikeResult($("#goodsId").val());
+                }
+                else {
+                    layer.msg(data.message);
+                }
+            },
+            error: function () {
+                layer.msg("error")
+            }
+        })
+    };
+
+    function getSpikeResult(goodsId) {
+        g_showLoading();
+        $.ajax({
+            url: '/spike/getSpikeResult',
+            type: 'GET',
+            data: {
+                goodsId: goodsId,
+            },
+            success: function (data) {
+                if (data.code === 200) {
+                    var orderId = data.data;
+                    if (orderId < 0) layer.msg("对不起, 秒杀失败");
+                    else if (orderId === 0) {
+                        setTimeout(function () {
+                            getSpikeResult(goodsId);
+                        }, 100);
+                    }
+                    else {
+                        layer.confirm("恭喜，秒杀成功！是否前往订单界面？", {btn:["yes", "no"]},
+                        function () {
+                            window.location.href='orderDetail.htm?orderId=' + orderId;
+                        },
+                        function () {
+                            layer.close();
+                        }
+                        )
+
+                    }
+                }
+                else {
+                    layer.msg(data.message);
+                }
+            },
+            error: function () {
+
+            }
+        })
+    }
+
+    function getDetail() {
+        let id = g_getQueryString("id");
+        $.ajax({
+            url: '/goods/detail/' + id,
+            type: 'GET',
+            success: function (data) {
+                if (data.code === 200) {
+                    render(data.data)
+                }
+                else {
+                    layer.msg(data.code);
+                }
+            },
+            error: function (data) {
+                layer.msg("error");
+            }
+        });
+    };
+
+    function render(detail) {
+        var user = detail.user;
+        var status = detail.status;
+        var goods = detail.goods;
+        var remainTime = detail.remainTime;
+        if (user) {
+            $("#userTip").hide();
+        }
+        $("#goodsName").text(goods.goodsName);
+        $("#picture").attr("src", goods.picture);
+        $("#startTime").text(new Date(goods.startDate).format("yyyy-MM-dd HH:mm:ss"));
+        $("#goodsId").val(goods.id);
+        $("#remainSeconds").val(remainTime);
+        $("#goodsPrice").text(goods.price);
+        $("#spikePrice").text(goods.spikePrice);
+        $("#spikeCount").text(goods.spikeCount);
+        countDown();
+    };
+
+    function countDown() {
+        var remainSeconds = $("#remainSeconds").val();
+        var timeout;
+        //秒杀还未开始
+        if (remainSeconds > 0) {
+            $("#buyButton").attr("disabled", true);
+            $("#spikeTip").html("秒杀倒计时 : " + remainSeconds + "秒");
+            timeout = setTimeout(function () {
+                $("#remainSeconds").val(remainSeconds - 1);
+                countDown();
+            }, 1000);
+            // 秒杀进行中
+        } else if (remainSeconds == 0) {
+            $("#buyButton").attr("disabled", false);
+            if (timeout) {
+                clearTimeout(timeout);
+            }
+            $("#spikeTip").html("秒杀进行中")
+        } else {
+            $("#buyButton").attr("disabled", true);
+            $("#spikeTip").html("秒杀已经结束");
+        }
+    };
+
+    // function f() {
+    //     // 配合model使用，script处需要 th:inline=javascript
+    //     var startTime = new Date([[${goods.startDate}]]).getTime();
+    //     var endTime = new Date([[${goods.endDate}]]).getTime();
+    //     var nowTime = Date.now();
+    //
+    //     var timeout;
+    //     /**
+    //      * 下面逻辑不对，需要考虑到库存状态
+    //      */
+    //     if (nowTime < startTime) {
+    //         var remainTime = parseInt((startTime - nowTime) / 1000); // s
+    //         $("#buyButton").attr("disabled", true);
+    //         timeout = setTimeout(function (){
+    //             $("#countDown").text(remainTime - 1);
+    //             f();}, 1000);
+    //     }
+    //     else if (nowTime > endTime){
+    //         $("#buyButton").attr("disabled", true);
+    //         $("#spikeTip").html("秒杀已经结束");
+    //     }
+    //     else {
+    //         $("#buyButton").attr("disabled", false);
+    //         if (timeout) clearTimeout(timeout);
+    //         $("#spikeTip").html("秒杀进行中")
+    //     }
+    // };
+
+</script>
+</html>

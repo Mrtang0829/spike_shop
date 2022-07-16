@@ -1,0 +1,81 @@
+spring:
+
+  # 配置静态化资源
+  resources:
+    # 启动默认静态资源
+    add-mappings: true
+    cache:
+      cachecontrol:
+        #缓存 1h
+        max-age: 3600
+    chain:
+      cache: true
+      enabled: true
+      compressed: true
+      html-application-cache: true
+    static-locations: classpath:/static/
+
+  thymeleaf:
+    cache: false
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/spike?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: '082908'
+    hikari:
+      pool-name: DateHiKariCP
+      minimum-idle: 5
+      idle-timeout: 1000000
+      maximum-pool-size: 15
+      auto-commit: true
+      max-lifetime: 1000000
+      connection-timeout: 30000
+      connection-test-query: select 1
+
+  redis:
+    # redis服务器地址
+    host: 127.0.0.1
+    port: 6379
+    # 默认操作的数据库 -> 0库
+    database: 0
+    timeout: 10000ms
+    lettuce:
+      pool:
+        # 最大链接数
+        max-active: 8
+        max-wait: 10000ms
+        max-idle: 200
+        min-idle: 5
+  rabbitmq:
+    host: localhost
+    username: guest
+    password: guest
+    virtual-host: /
+    port: 5672
+    listener:
+      simple:
+        concurrency: 10
+        max-concurrency: 20
+        #限制每次处理一条消息
+        prefetch: 1
+        auto-startup: true
+        # 被拒绝时重新入队
+        default-requeue-rejected: true
+    template:
+      retry:
+        enabled: true
+        initial-interval: 1000ms
+        max-attempts: 5
+        max-interval: 10000ms
+        multiplier: 1
+
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/*Mapper.xml
+  # 返回类型
+  type-aliases-package: com.tz.spike_shop.pojo
+
+logging:
+  level:
+    com.tz.spike_shop.mapper: debug

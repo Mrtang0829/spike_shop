@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tz.spike_shop.mapper.GoodsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.tz.spike_shop.pojo.Goods">
+        <id column="id" property="id" />
+        <result column="goods_name" property="goodsName" />
+        <result column="goods_title" property="goodsTitle" />
+        <result column="goods_picture" property="goodsPicture" />
+        <result column="goods_detail" property="goodsDetail" />
+        <result column="goods_price" property="goodsPrice" />
+        <result column="goods_store" property="goodsStore" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, goods_name, goods_title, goods_picture, goods_detail, goods_price, goods_store
+    </sql>
+
+    <resultMap id="GoodsVoResultMap" type="com.tz.spike_shop.vo.GoodsVo">
+        <id column="id" property="id" />
+        <result column="goods_name" property="goodsName" />
+        <result column="goods_title" property="goodsTitle" />
+        <result column="goods_picture" property="picture" />
+        <result column="goods_detail" property="detail" />
+        <result column="goods_price" property="price" />
+        <result column="goods_store" property="storeCount" />
+        <result column="spike_price" property="spikePrice"/>
+        <result column="store_count" property="spikeCount"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+    </resultMap>
+
+    <select id="findAllGoodsVo" resultMap="GoodsVoResultMap">
+        SELECT
+            g.id,
+            g.goods_name,
+            g.goods_title,
+            g.goods_picture,
+            g.goods_detail,
+            g.goods_price,
+            g.goods_store,
+            sg.spike_price,
+            sg.store_count,
+            sg.start_date,
+            sg.end_date
+        FROM
+            t_goods AS g
+        LEFT JOIN t_spike_goods AS sg ON g.id = sg.goods_id;
+    </select>
+
+    <select id="findGoodById" parameterType="java.lang.Long" resultMap="GoodsVoResultMap">
+        SELECT
+            g.id,
+            g.goods_name,
+            g.goods_title,
+            g.goods_picture,
+            g.goods_detail,
+            g.goods_price,
+            g.goods_store,
+            sg.spike_price,
+            sg.store_count,
+            sg.start_date,
+            sg.end_date
+        FROM
+            t_goods AS g
+        LEFT JOIN t_spike_goods AS sg ON g.id = sg.goods_id
+        Where g.id = #{id}
+    </select>
+
+</mapper>
