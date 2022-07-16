@@ -2,6 +2,7 @@ package com.tz.spike_shop.controller;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.tz.spike_shop.exception.GlobalException;
 import com.tz.spike_shop.pojo.*;
 import com.tz.spike_shop.rabbitmq.MqSender;
 import com.tz.spike_shop.service.IGoodsService;
@@ -11,12 +12,14 @@ import com.tz.spike_shop.utils.JsonUtil;
 import com.tz.spike_shop.vo.GoodsVo;
 import com.tz.spike_shop.vo.ResponseResult;
 import com.tz.spike_shop.vo.ResponseResultEnum;
+import com.wf.captcha.ArithmeticCaptcha;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.CollectionUtils;
@@ -25,9 +28,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -40,7 +44,7 @@ import java.util.Map;
 @Controller
 @RequestMapping("/spike")
 @Slf4j
-public class SpikeGoodsController implements InitializingBean {
+public class SpikeController implements InitializingBean {
 
     @Autowired
     IGoodsService goodsService;
@@ -57,16 +61,59 @@ public class SpikeGoodsController implements InitializingBean {
     @Autowired
     private MqSender mqSender;
 
+    @Autowired
+    private RedisScript<Long> redisScript;
+
     private Map<Long, Boolean> emptyStoreMap = new HashMap<>();
 
 
+    /**
+     * 拿到秒杀结果
+     * @param user
+     * @param goodsId
+     * @return
+     */
     @GetMapping("/getSpikeResult")
     @ResponseBody
     public ResponseResult getSpikeResult(User user, Long goodsId) {
-        if (user == null) return ResponseResult.error(ResponseResultEnum.USER_NOT_EXIST_ERROR);
+        if (user == null) return ResponseResult.error(ResponseResultEnum.USER_NOT_LOGIN);
 
         Long orderId = spikeOrderService.getResult(user, goodsId);
         return ResponseResult.success(orderId);
+    }
+
+
+    @GetMapping("/getSpikePath")
+    @ResponseBody
+    public ResponseResult getSpikePath(User user, Long goodsId, String captcha) {
+        if (user == null) return ResponseResult.error(ResponseResultEnum.USER_NOT_LOGIN);
+
+        Boolean captchaValid = orderService.validCaptcha(user, goodsId, captcha);
+        if (!captchaValid) {
+            return ResponseResult.error(ResponseResultEnum.CAPTCHA_VALID_ERROR);
+        }
+        String path = orderService.createSpikePath(user, goodsId);
+        return ResponseResult.success(path);
+    }
+
+    @GetMapping("/captcha")
+    public void captcha(User user, Long goodsId, HttpServletResponse response) {
+        if (user == null) throw new GlobalException("user not login", ResponseResultEnum.USER_NOT_LOGIN);
+
+        response.setContentType("image/gif");
+        response.setHeader("Pragma", "No-cache");
+        response.setHeader("Cache-Control", "no-cache");
+        response.setDateHeader("Expires", 0);
+
+        ArithmeticCaptcha captcha = new ArithmeticCaptcha(130, 45, 3);
+        // 存放验证码答案
+        redisTemplate.opsForValue().set("captcha:" + user.getId() + ":" + goodsId, captcha.text(), 5, TimeUnit.MINUTES);
+
+        try {
+            captcha.out(response.getOutputStream());
+        } catch (IOException e) {
+            System.out.println("验证码生成失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -142,12 +189,17 @@ public class SpikeGoodsController implements InitializingBean {
      */
     @PostMapping("/doSpike")
     @ResponseBody
-    public ResponseResult doSpike(User user, Long goodsId) {
+    public ResponseResult doSpike(String path, User user, Long goodsId) {
         if (user == null) return ResponseResult.error(ResponseResultEnum.USER_NOT_LOGIN);
 
         ValueOperations valueOperations = redisTemplate.opsForValue();
 
-        // 重复购买， 注意这里的redis 键只存在60秒，应改为秒杀的整个时间段的时间长
+        Boolean success = orderService.validSpikePath(user, goodsId, path);
+        if (!success) {
+            return ResponseResult.error(ResponseResultEnum.SPIKE_PATH_ERROR);
+        }
+
+        // 重复购买
         SpikeOrder spikeOrder = (SpikeOrder)valueOperations.get("user_" + user.getId() + ":goods_" + goodsId);
         if (spikeOrder != null) {
             return ResponseResult.error(ResponseResultEnum.REPEAT_SPIKE);
@@ -157,15 +209,23 @@ public class SpikeGoodsController implements InitializingBean {
         if (emptyStoreMap.getOrDefault(goodsId, true)) {
             return ResponseResult.error(ResponseResultEnum.EMPTY_STOCK);
         }
-        // 使用redis预减库存
-        Long goodsNum = valueOperations.decrement("spikeGoods:" + goodsId);
 
-        // 没货了
+        // 单体项目使用此标注进行redis预减库存
+        Long goodsNum = valueOperations.decrement("spikeGoods:" + goodsId);
         if (goodsNum < 0) {
             emptyStoreMap.put(goodsId, true);
             valueOperations.increment("spikeGoods:" + goodsId);
             return ResponseResult.error(ResponseResultEnum.EMPTY_STOCK);
         }
+
+        // 分布式环境使用此标注进行redis预减库存
+//        Long store = (Long) redisTemplate.execute(redisScript, Collections.singletonList("spikeGoods:" + goodsId));
+//        if (store < 0) {
+//            emptyStoreMap.put(goodsId, true);
+//            return ResponseResult.error(ResponseResultEnum.EMPTY_STOCK);
+//        }
+
+
         SpikeMessage message = new SpikeMessage(user, goodsId);
         mqSender.topicExchangeSender(JsonUtil.object2JsonStr(message), "spike.message");
 
@@ -187,10 +247,8 @@ public class SpikeGoodsController implements InitializingBean {
             redisTemplate.opsForValue().set("spikeGoods:" + goodsVo.getId(), goodsVo.getSpikeCount());
             emptyStoreMap.put(goodsVo.getId(), false);
         });
-
-        for (Long id : emptyStoreMap.keySet()) {
-            log.info("id : " + id + " isEmpty : " + emptyStoreMap.get(id));
-        }
-
+//        for (Long id : emptyStoreMap.keySet()) {
+//            log.info("id : " + id + " isEmpty : " + emptyStoreMap.get(id));
+//        }
     }
 }

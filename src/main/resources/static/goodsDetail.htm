@@ -47,8 +47,14 @@
 <!--                    <input type="hidden" name="id" id="goodsId">-->
 <!--                    <button class="btn btn-primary btn-block" type="submit" id="buyButton">立即秒杀</button>-->
 <!--                </form>-->
-                <input type="hidden" name="id" id="goodsId">
-                <button class="btn btn-primary btn-block" type="button" onclick="spike()" id="buyButton">立即秒杀</button>
+                <div class="row">
+                    <div class="form-inline">
+                        <img id="captcha" width="130" height="45" onclick="refreshCaptcha()" style="display: none">
+                        <input id="captchaResult" class="form-control" style="display: none">
+                        <input type="hidden" name="id" id="goodsId">
+                        <button class="btn btn-primary" type="button" onclick="getSpikePath()" id="buyButton">立即秒杀</button>
+                    </div>
+                </div>
             </td>
         </tr>
         <tr>
@@ -71,12 +77,43 @@
         getDetail();
     });
 
-    function spike() {
+    // 之前实现了页面静态化，这里需要加 new Date() 保证每次发送的请求不一样
+    function refreshCaptcha() {
+        $("#captcha").attr("src", "/spike/captcha?goodsId=" + $("#goodsId").val() + "&time=" + new Date()) ;
+    }
+
+    function getSpikePath() {
+        g_showLoading();
+        $.ajax({
+            url: '/spike/getSpikePath',
+            type: 'GET',
+            data: {
+                goodsId: $("#goodsId").val(),
+                captcha: $("#captchaResult").val()
+            },
+            success: function (data) {
+                if(data.code === 200) {
+                    var path = data.data;
+                    spike(path);
+                }
+                else {
+                    layer.msg(data.message);
+                }
+            },
+            error: function () {
+                layer.msg("error")
+            }
+        })
+    }
+
+
+    function spike(path) {
         $.ajax({
             url: '/spike/doSpike',
             type: 'POST',
             data: {
                 goodsId: $("#goodsId").val(),
+                path: path
             },
             success: function (data) {
                 if(data.code === 200) {
@@ -183,6 +220,9 @@
             }, 1000);
             // 秒杀进行中
         } else if (remainSeconds == 0) {
+            refreshCaptcha();
+            $("#captcha").show();
+            $("#captchaResult").show();
             $("#buyButton").attr("disabled", false);
             if (timeout) {
                 clearTimeout(timeout);
@@ -191,6 +231,8 @@
         } else {
             $("#buyButton").attr("disabled", true);
             $("#spikeTip").html("秒杀已经结束");
+            $("#captcha").hide();
+            $("#captchaResult").hide();
         }
     };
 

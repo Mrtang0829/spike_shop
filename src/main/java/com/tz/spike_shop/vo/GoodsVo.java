@@ -25,6 +25,11 @@ public class GoodsVo {
     private Long id;
 
     /**
+     * 秒杀表中的id
+     */
+    private Long spikeId;
+
+    /**
      * 商品价格
      */
     private BigDecimal price;
@@ -65,7 +70,7 @@ public class GoodsVo {
     private String picture;
 
     /**
-     * 商品秒杀开始时间
+     * 商品秒杀开始时间,返回json数据时会转格式
      */
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private Date startDate;

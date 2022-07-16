@@ -32,6 +32,10 @@ public enum ResponseResultEnum {
     ORDER_ERROR(40409, "订单不存在"),
 
     USER_NOT_LOGIN(40410, "用户未登录"),
+
+    SPIKE_PATH_ERROR(40411, "秒杀地址验证错误"),
+
+    CAPTCHA_VALID_ERROR(40412, "验证码验证错误"),
     ;
 
     private Integer code;

@@ -20,6 +20,7 @@
 
     <resultMap id="GoodsVoResultMap" type="com.tz.spike_shop.vo.GoodsVo">
         <id column="id" property="id" />
+        <id column="spike_id" property="spikeId" />
         <result column="goods_name" property="goodsName" />
         <result column="goods_title" property="goodsTitle" />
         <result column="goods_picture" property="picture" />
@@ -41,6 +42,7 @@
             g.goods_detail,
             g.goods_price,
             g.goods_store,
+            sg.id as spike_id,
             sg.spike_price,
             sg.store_count,
             sg.start_date,

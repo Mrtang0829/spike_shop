@@ -10,6 +10,8 @@ import com.tz.spike_shop.service.IGoodsService;
 import com.tz.spike_shop.service.IOrderService;
 import com.tz.spike_shop.service.ISpikeGoodsService;
 import com.tz.spike_shop.service.ISpikeOrderService;
+import com.tz.spike_shop.utils.MD5Util;
+import com.tz.spike_shop.utils.UUIDUtil;
 import com.tz.spike_shop.vo.GoodsVo;
 import com.tz.spike_shop.vo.OrderVo;
 import com.tz.spike_shop.vo.ResponseResult;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -56,8 +59,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         /**
          * 修改秒杀库存
          */
-        SpikeGoods goods = spikeGoodsService.getOne(new QueryWrapper<SpikeGoods>().eq("goods_id", good.getId()));
-        if (goods.getStoreCount() < 1) {
+        SpikeGoods spikeGoods = spikeGoodsService.getOne(new QueryWrapper<SpikeGoods>().eq("goods_id", good.getId()));
+        if (spikeGoods.getStoreCount() < 1) {
             redisTemplate.opsForValue().set("isStoreEmpty:" + good.getId(), 1);
             return null;
         }
@@ -66,7 +69,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         // 大并发环境下无法确保获取的goods是否已经被其他的请求修改了，所以这里用sql语句
         // 此方法仍不满足高并发
         boolean spike = spikeGoodsService.update(new UpdateWrapper<SpikeGoods>().setSql("store_count=store_count-1").
-                eq("id", goods.getId()).gt("store_count", 0));
+                eq("id", spikeGoods.getId()).gt("store_count", 0));
         if (!spike) return null;
 
         // 修改真实商品库存
@@ -100,6 +103,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         spikeOrderMapper.insert(spikeOrder);
 
 
+//        Long diff = (spikeGoods.getEndDate().getTime() - new Date().getTime()) / 1000;
+//        Long time = diff < 0 ? 0 :  diff;
         // 标记已购买
         redisTemplate.opsForValue().set("user_" + user.getId() + ":goods_" + good.getId(), spikeOrder, 60, TimeUnit.SECONDS);
 
@@ -115,5 +120,33 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         log.info(orderVo.toString());
         return ResponseResult.success(orderVo);
+    }
+
+    @Override
+    public String createSpikePath(User user, Long goodsId) {
+        String path = MD5Util.md5(UUIDUtil.uuid());
+        redisTemplate.opsForValue().set("spikePath:" + user.getId() + ":" + goodsId, path, 60, TimeUnit.SECONDS);
+        return path;
+    }
+
+
+    @Override
+    public Boolean validSpikePath(User user, Long goodsId, String path) {
+        if (user == null || StringUtils.isEmpty(path)) {
+            return false;
+        }
+
+        String p = (String) redisTemplate.opsForValue().get("spikePath:" + user.getId() + ":" + goodsId);
+
+        return path.equals(p);
+    }
+
+    @Override
+    public Boolean validCaptcha(User user, Long goodsId, String captcha) {
+        if (user == null || StringUtils.isEmpty(captcha)) {
+            return false;
+        }
+        String captchaValid = (String) redisTemplate.opsForValue().get("captcha:" + user.getId() + ":" + goodsId);
+        return captcha.equals(captchaValid);
     }
 }

@@ -33,10 +33,15 @@ public class RedisConfig {
         return redisTemplate;
     }
 
+    /**
+     * 实现 redis 内存预存库存的自减操作，以适配分布式环境, 分布式环境下多台终端下的redis之间并不具有原子性，使用 redis + lua保证分布式原子性
+     *
+     * @return
+     */
     @Bean
     public DefaultRedisScript<Long> script() {
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-        script.setLocation(new ClassPathResource("lock.lua"));
+        script.setLocation(new ClassPathResource("store.lua"));
         script.setResultType(Long.class);
         return script;
     }
