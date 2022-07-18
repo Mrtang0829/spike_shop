@@ -99,4 +99,10 @@ public class UserController {
         sender.topicExchangeSender("hello", key);
         return ResponseResult.success();
     }
+
+    @GetMapping("/checkUser")
+    @ResponseBody
+    public ResponseResult checkUser(User user) {
+        return ResponseResult.success(user);
+    }
 }

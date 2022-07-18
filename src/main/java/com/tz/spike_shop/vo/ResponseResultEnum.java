@@ -38,6 +38,8 @@ public enum ResponseResultEnum {
     CAPTCHA_VALID_ERROR(40412, "验证码验证错误"),
 
     ACCESS_ERROR(40413, "访问过于频繁，请稍后再试"),
+
+    REDIS_ERROR(40414, "redis error"),
     ;
 
     private Integer code;

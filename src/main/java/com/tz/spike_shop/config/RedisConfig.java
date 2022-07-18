@@ -14,7 +14,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfig {
 
     /**
-     * 解决分布式 session 的一种方式，直接将用户信息存入redis, 默认存入是使用二进制形式，这里需要序列化
+     * 解决分布式 session 的一种方式，直接将用户信息存入redis, 默认存入是使用Jdk序列化（二进制形式），这里使用string + json形式
      * @param redisConnectionFactory
      * @return
      */
@@ -24,10 +24,12 @@ public class RedisConfig {
         // 普通类型 key 与 value的序列化
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+//        redisTemplate.setValueSerializer(new KryoRedisSerializer<>(Object.class));
 
         // hash类型
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+//        redisTemplate.setHashValueSerializer(new KryoRedisSerializer<>(Object.class));
 
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         return redisTemplate;
