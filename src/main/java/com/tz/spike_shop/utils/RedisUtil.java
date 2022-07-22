@@ -70,7 +70,7 @@ public class RedisUtil {
      * @param key
      * @param dealt
      */
-    public void incr(String key, int dealt) {
+    public synchronized void incr(String key, int dealt) {
         try {
             Integer number = (Integer) get(key);
             if (number == null) return ;

@@ -45,8 +45,9 @@ public class KryoIncrAtomicController {
 
     /**
      * 使用 kryo 序列化后redis 中存二进制数据, redisTemplate.opsForValue().increment() 无法对二进制操作
-     * 项目中需要进行自增操作（存储操作数）,序列化方式选用 GenericJackson2JsonRedisSerializer
-     * 使用JMeter压测原子性, 明显redisUtil.incr采用了先get再set方法，不具备原子性
+     * 项目中需要进行自增操作（存储操作数）,序列化方式建议选用 GenericJackson2JsonRedisSerializer
+     * 使用synchronized保证高并发下kryo序列化的自增操作数据一致性
+     * 使用JMeter压测
      * @param key
      * @param dealt
      * @return
