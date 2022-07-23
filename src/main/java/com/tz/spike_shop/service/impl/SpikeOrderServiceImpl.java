@@ -2,6 +2,7 @@ package com.tz.spike_shop.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tz.spike_shop.config.UserContext;
 import com.tz.spike_shop.mapper.SpikeOrderMapper;
 import com.tz.spike_shop.pojo.SpikeOrder;
 import com.tz.spike_shop.pojo.User;
@@ -28,7 +29,8 @@ public class SpikeOrderServiceImpl extends ServiceImpl<SpikeOrderMapper, SpikeOr
     private RedisTemplate redisTemplate;
 
     @Override
-    public Long getResult(User user, Long goodsId) {
+    public Long getResult(Long goodsId) {
+        User user = UserContext.getUser();
         SpikeOrder spikeOrder = spikeOrderMapper.selectOne(new QueryWrapper<SpikeOrder>().
                 eq("user_id", user.getId()).eq("goods_id", goodsId));
         if (spikeOrder != null) return spikeOrder.getOrderId();

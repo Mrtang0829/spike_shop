@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 配置拦截器，对接口做流量控制，用户登录控制（配合方法解析器）
+ *
+ * 使用ThreadLocal配置全局用户信息，单个线程内共享
  */
 @Component
 public class AccessLimitInterceptor implements HandlerInterceptor {
@@ -36,7 +38,7 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (handler instanceof HandlerMethod) {
             User user = getUser(request, response);
-            UserContext.setThreadLocal(user);
+            UserContext.setUser(user);
             HandlerMethod handlerMethod = (HandlerMethod)handler;
             AccessLimit accessLimit = handlerMethod.getMethodAnnotation(AccessLimit.class);
             if (accessLimit == null) return true;
@@ -92,5 +94,18 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
         if (StringUtils.isEmpty(cookie)) return null;
 
         return userService.getUserByCookie(cookie, request, response);
+    }
+
+    /**
+     * 线程访问完毕后，清除用户数据
+     * @param request
+     * @param response
+     * @param handler
+     * @param ex
+     * @throws Exception
+     */
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        UserContext.remove();
     }
 }

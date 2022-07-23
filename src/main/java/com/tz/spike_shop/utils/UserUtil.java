@@ -51,7 +51,7 @@ public class UserUtil {
 
         //登录，生成userTicket
         String urlString = "http://localhost:8080/user/doLogin";
-        File file = new File("C:\\Users\\Laymedown\\Desktop\\config.txt");
+        File file = new File("C:\\Users\\Laymedown\\Desktop\\apache-jmeter-5.5\\config.txt");
         if (file.exists()) {
             file.delete();
         }

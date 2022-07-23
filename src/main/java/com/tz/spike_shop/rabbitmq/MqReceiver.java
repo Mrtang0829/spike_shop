@@ -1,6 +1,7 @@
 package com.tz.spike_shop.rabbitmq;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.tz.spike_shop.config.UserContext;
 import com.tz.spike_shop.mapper.SpikeOrderMapper;
 import com.tz.spike_shop.pojo.SpikeMessage;
 import com.tz.spike_shop.pojo.SpikeOrder;
@@ -69,7 +70,9 @@ public class MqReceiver {
             return;
         }
 
-        orderService.spike(user, goodsVo);
+        UserContext.setUser(user);
+        orderService.spike(goodsVo);
+        UserContext.remove();
     }
 
     @RabbitListener(queues = "mq_queue02")

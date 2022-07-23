@@ -14,5 +14,5 @@ import com.tz.spike_shop.pojo.User;
  */
 public interface ISpikeOrderService extends IService<SpikeOrder> {
 
-    Long getResult(User user, Long goodsId);
+    Long getResult(Long goodsId);
 }

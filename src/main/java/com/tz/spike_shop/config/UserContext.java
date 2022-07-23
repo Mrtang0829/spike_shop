@@ -4,13 +4,17 @@ import com.tz.spike_shop.pojo.User;
 
 public class UserContext {
 
-    private static final ThreadLocal<User> threadLocal = new ThreadLocal<>();
+    private static final ThreadLocal<User> userInfo = new ThreadLocal<>();
 
-    public static void setThreadLocal(User user) {
-        threadLocal.set(user);
+    public static void setUser(User user) {
+        userInfo.set(user);
     }
 
-    public static User getThreadLocal() {
-        return threadLocal.get();
+    public static User getUser() {
+        return userInfo.get();
+    }
+
+    public static void remove() {
+        userInfo.remove();
     }
 }

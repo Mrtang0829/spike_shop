@@ -79,7 +79,7 @@ public class SpikeController implements InitializingBean {
     public ResponseResult getSpikeResult(User user, Long goodsId) {
         if (user == null) return ResponseResult.error(ResponseResultEnum.USER_NOT_LOGIN);
 
-        Long orderId = spikeOrderService.getResult(user, goodsId);
+        Long orderId = spikeOrderService.getResult(goodsId);
         return ResponseResult.success(orderId);
     }
 
@@ -90,11 +90,11 @@ public class SpikeController implements InitializingBean {
     public ResponseResult getSpikePath(User user, Long goodsId, String captcha) {
         if (user == null) return ResponseResult.error(ResponseResultEnum.USER_NOT_LOGIN);
 
-        Boolean captchaValid = orderService.validCaptcha(user, goodsId, captcha);
+        Boolean captchaValid = orderService.validCaptcha(goodsId, captcha);
         if (!captchaValid) {
             return ResponseResult.error(ResponseResultEnum.CAPTCHA_VALID_ERROR);
         }
-        String path = orderService.createSpikePath(user, goodsId);
+        String path = orderService.createSpikePath(goodsId);
         return ResponseResult.success(path);
     }
 
@@ -145,7 +145,7 @@ public class SpikeController implements InitializingBean {
             return "spike_fail";
         }
 
-        Order order = orderService.spike(user, good);
+        Order order = orderService.spike(good);
 
         model.addAttribute("order", order);
         model.addAttribute("goods", good);
@@ -176,7 +176,7 @@ public class SpikeController implements InitializingBean {
             return ResponseResult.error(ResponseResultEnum.REPEAT_SPIKE);
         }
 
-        Order order = orderService.spike(user, good);
+        Order order = orderService.spike(good);
         return ResponseResult.success(order);
     }
 
@@ -196,7 +196,7 @@ public class SpikeController implements InitializingBean {
 
         ValueOperations valueOperations = redisTemplate.opsForValue();
 
-        Boolean success = orderService.validSpikePath(user, goodsId, path);
+        Boolean success = orderService.validSpikePath(goodsId, path);
         if (!success) {
             return ResponseResult.error(ResponseResultEnum.SPIKE_PATH_ERROR);
         }
@@ -207,7 +207,7 @@ public class SpikeController implements InitializingBean {
             return ResponseResult.error(ResponseResultEnum.REPEAT_SPIKE);
         }
 
-        // 使用内存标记,减少redis的无用访问
+        // 使用内存标记,减少redis的无用访问, 分布式环境失效，需要更改
         if (emptyStoreMap.getOrDefault(goodsId, true)) {
             return ResponseResult.error(ResponseResultEnum.EMPTY_STOCK);
         }

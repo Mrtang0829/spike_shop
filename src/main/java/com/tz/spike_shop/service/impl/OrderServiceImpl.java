@@ -3,6 +3,8 @@ package com.tz.spike_shop.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tz.spike_shop.config.UserContext;
+import com.tz.spike_shop.exception.GlobalException;
 import com.tz.spike_shop.mapper.OrderMapper;
 import com.tz.spike_shop.mapper.SpikeOrderMapper;
 import com.tz.spike_shop.pojo.*;
@@ -55,7 +57,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Transactional
     @Override
-    public Order spike(User user, GoodsVo good) {
+    public Order spike(GoodsVo good) {
+        User user = UserContext.getUser();
         /**
          * 修改秒杀库存
          */
@@ -123,7 +126,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public String createSpikePath(User user, Long goodsId) {
+    public String createSpikePath(Long goodsId) {
+        User user = UserContext.getUser();
         String path = MD5Util.md5(UUIDUtil.uuid());
         redisTemplate.opsForValue().set("spikePath:" + user.getId() + ":" + goodsId, path, 60, TimeUnit.SECONDS);
         return path;
@@ -131,7 +135,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
 
     @Override
-    public Boolean validSpikePath(User user, Long goodsId, String path) {
+    public Boolean validSpikePath(Long goodsId, String path) {
+        User user = UserContext.getUser();
         if (user == null || StringUtils.isEmpty(path)) {
             return false;
         }
@@ -142,7 +147,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public Boolean validCaptcha(User user, Long goodsId, String captcha) {
+    public Boolean validCaptcha(Long goodsId, String captcha) {
+        User user = UserContext.getUser();
         if (user == null || StringUtils.isEmpty(captcha)) {
             return false;
         }

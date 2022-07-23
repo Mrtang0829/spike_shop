@@ -16,13 +16,13 @@ import com.tz.spike_shop.vo.ResponseResult;
  */
 public interface IOrderService extends IService<Order> {
 
-    Order spike(User user, GoodsVo good);
+    Order spike(GoodsVo good);
 
     ResponseResult findOrderById(Long orderId);
 
-    String createSpikePath(User user, Long goodsId);
+    String createSpikePath(Long goodsId);
 
-    Boolean validSpikePath(User user, Long goodsId, String path);
+    Boolean validSpikePath(Long goodsId, String path);
 
-    Boolean validCaptcha(User user, Long goodsId, String captcha);
+    Boolean validCaptcha(Long goodsId, String captcha);
 }
