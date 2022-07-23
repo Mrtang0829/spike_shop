@@ -47,6 +47,8 @@ spring:
         max-wait: 10000ms
         max-idle: 200
         min-idle: 5
+
+  # 配置mq相关信息
   rabbitmq:
     host: localhost
     username: guest
@@ -55,13 +57,19 @@ spring:
     port: 5672
     listener:
       simple:
+        # 消费过程中出现异常后是否尝试重新消费
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 5000ms
         concurrency: 10
         max-concurrency: 20
         #限制每次处理一条消息
         prefetch: 1
         auto-startup: true
-        # 被拒绝时重新入队
-        default-requeue-rejected: true
+        # 重试次数超过上面的设置之后是否丢弃(消费者listener抛出异常，是否重回队列，默认true：重回队列， false为不重回队列）
+        default-requeue-rejected: false
+
     template:
       retry:
         enabled: true
