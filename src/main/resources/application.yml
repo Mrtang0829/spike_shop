@@ -87,3 +87,10 @@ mybatis-plus:
 logging:
   level:
     com.tz.spike_shop.mapper: debug
+
+spikeresult:
+  pool:
+    corePoolSize: 5
+    maxPoolSize: 20
+    keepAliveSeconds: 100
+    queueCapacity: 50

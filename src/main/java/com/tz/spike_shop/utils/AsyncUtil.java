@@ -17,7 +17,7 @@ public class AsyncUtil {
      * @param userId
      * @param spikeResultMessage
      */
-    @Async
+    @Async(value = "spikePool")
     public void sendInfo(Long userId, SpikeResultMessage spikeResultMessage) {
         String message = JsonUtil.object2JsonStr(spikeResultMessage);
         websocket.sendInfo(userId, message);

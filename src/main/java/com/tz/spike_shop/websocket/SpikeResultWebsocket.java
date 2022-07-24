@@ -30,7 +30,7 @@ public class SpikeResultWebsocket {
     public void sendMessage(Session session, String message) throws IOException {
         if (session == null) return;
         synchronized (session) {
-            System.out.println("发送数据：" + message);
+            log.info("发送数据：" + message);
             session.getBasicRemote().sendText(message);
         }
     }
