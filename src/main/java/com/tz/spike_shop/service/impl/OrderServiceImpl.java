@@ -12,6 +12,7 @@ import com.tz.spike_shop.service.IGoodsService;
 import com.tz.spike_shop.service.IOrderService;
 import com.tz.spike_shop.service.ISpikeGoodsService;
 import com.tz.spike_shop.service.ISpikeOrderService;
+import com.tz.spike_shop.utils.AsyncUtil;
 import com.tz.spike_shop.utils.MD5Util;
 import com.tz.spike_shop.utils.UUIDUtil;
 import com.tz.spike_shop.vo.GoodsVo;
@@ -55,6 +56,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Autowired
     private RedisTemplate redisTemplate;
 
+    @Autowired
+    private AsyncUtil asyncUtil;
+
     @Transactional
     @Override
     public Order spike(GoodsVo good) {
@@ -81,6 +85,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 //        real_good.setGoodsStore(real_good.getGoodsStore() - 1);
 //        goodsService.updateById(real_good);
         goodsService.update(new UpdateWrapper<Goods>().setSql("goods_store=goods_store-1").eq("id", real_good.getId()));
+
 
         /**
          * 生成订单
@@ -110,7 +115,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 //        Long time = diff < 0 ? 0 :  diff;
         // 标记已购买
         redisTemplate.opsForValue().set("user_" + user.getId() + ":goods_" + good.getId(), spikeOrder, 60, TimeUnit.SECONDS);
-
+        asyncUtil.sendInfo(user.getId(), new SpikeResultMessage(order.getId()));
         return order;
     }
 

@@ -68,6 +68,12 @@ public class UserController {
         return userService.updatePassword(cookie, password, request, response);
     }
 
+    @GetMapping("/getUser")
+    @ResponseBody
+    public ResponseResult getUser(User user) {
+        return ResponseResult.success(user);
+    }
+
 
     @GetMapping("/mq")
     @ResponseBody

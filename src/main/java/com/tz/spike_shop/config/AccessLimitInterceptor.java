@@ -21,15 +21,12 @@ import java.io.PrintWriter;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 配置拦截器，对接口做流量控制，用户登录控制（配合方法解析器）
+ * 配置拦截器，使用计数法对接口做流量控制，
  *
- * 使用ThreadLocal配置全局用户信息，单个线程内共享
  */
 @Component
 public class AccessLimitInterceptor implements HandlerInterceptor {
 
-    @Autowired
-    private IUserService userService;
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -37,8 +34,7 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (handler instanceof HandlerMethod) {
-            User user = getUser(request, response);
-            UserContext.setUser(user);
+            User user = UserContext.getUser();
             HandlerMethod handlerMethod = (HandlerMethod)handler;
             AccessLimit accessLimit = handlerMethod.getMethodAnnotation(AccessLimit.class);
             if (accessLimit == null) return true;
@@ -88,24 +84,4 @@ public class AccessLimitInterceptor implements HandlerInterceptor {
         printWriter.close();
     }
 
-
-    public User getUser(HttpServletRequest request, HttpServletResponse response) {
-        String cookie = CookieUtil.getCookieValue(request, "userCookie");
-        if (StringUtils.isEmpty(cookie)) return null;
-
-        return userService.getUserByCookie(cookie, request, response);
-    }
-
-    /**
-     * 线程访问完毕后，清除用户数据
-     * @param request
-     * @param response
-     * @param handler
-     * @param ex
-     * @throws Exception
-     */
-    @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        UserContext.remove();
-    }
 }

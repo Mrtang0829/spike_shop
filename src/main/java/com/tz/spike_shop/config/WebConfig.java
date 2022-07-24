@@ -23,6 +23,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private AccessLimitInterceptor accessLimitInterceptor;
 
+    @Autowired
+    private UserInterceptor userInterceptor;
+
     /**
      * 避免静态资源被屏蔽
      * @param registry
@@ -41,6 +44,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(accessLimitInterceptor);
+        registry.addInterceptor(accessLimitInterceptor).order(2);
+
+        registry.addInterceptor(userInterceptor).order(1);
     }
 }
